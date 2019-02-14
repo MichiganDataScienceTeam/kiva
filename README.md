@@ -4,7 +4,23 @@ https://www.kaggle.com/kiva/data-science-for-good-kiva-crowdfunding
 
 # Contributing
 
+## tl;dr (the magic version)**
+make sure you have push permissions to the repository (message naitian
+if you're not sure)
 
+To set up (only do this once):
+- `git clone https://github.com/MichiganDataScienceTeam/kiva`
+- `./setup.sh`
+
+To version control your own code, run:
+- `git add <files you want to commit>`
+- `./push.sh`
+
+To make a pull request to `master`, run:
+- `git add <files you want to commit>`
+- `./pr.sh`
+
+## Under the hood version
 **Clone the github repository**
 
 `git clone https://github.com/MichiganDataScienceTeam/kiva`
