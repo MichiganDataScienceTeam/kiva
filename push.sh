@@ -7,14 +7,13 @@ then
     exit 1
 fi
 
-read -p "Do you want to add everything? (y/N)" push_all
+read -p "Have you git added everything you want in the commit? (y/N)" push_all
 
-if [[ "$push_all" == "y" ]];
+if [[ "$push_all" != "y" ]];
 then
     #statements
-    git add analysis/
-else
     echo "'git add' the files you'd like to commit, then run this script again"
+    exit 0
 fi
 
 if git diff --name-only --cached | grep "^visualizations/" ||
