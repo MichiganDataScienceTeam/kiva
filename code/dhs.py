@@ -17,6 +17,7 @@ class JoinedDataset(object):
         """
         self._kiva_dataset = kiva_dataset
         self._dhs_dataset = dhs_dataset
+        self.df = geopandas.sjoin(self._dhs_dataset.df, self._kiva_dataset.df, how="inner")
 
 
 class KivaDataset(object):
@@ -24,10 +25,8 @@ class KivaDataset(object):
     """Docstring for KivaDataset. """
 
     def __init__(self, datadir, country=None):
-        """TODO: to be defined1.
-
-        :filename: TODO
-
+        """
+        datadir is the directory with all the kiva dataset files
         """
         self._kiva_loan_region = Path(datadir) / "loan_themes_by_region.csv"
         self._kiva_loan_theme_id = Path(datadir) / "loan_theme_ids.csv"
@@ -45,9 +44,9 @@ class KivaDataset(object):
             self.loan_reg = self.loan_reg[self.loan_reg.country == self.country].dropna(subset=["geocode"])
         self.loan_reg = self.loan_reg.dropna(subset=["geocode"])
         self.loan_reg["geocode"] = self.loan_reg.geocode.apply(pd.eval).apply(lambda x: Point(*x[0]))
-        self.kiva_mpi_geo = geopandas.GeoDataFrame(self.loan_reg, crs=crs, geometry="geocode")
+        self.loan_reg = geopandas.GeoDataFrame(self.loan_reg, crs=crs, geometry="geocode")
         self.df = pd.merge(left=self.df, right=self.loan_themes_by_id, on="id")
-        self.df = pd.merge(left=self.df, right=self.loan_reg, on="Loan Theme ID")
+        self.df = pd.merge(left=self.loan_reg, right=self.df, on="Loan Theme ID")
 
 
 class DHSDataset(object):
@@ -55,7 +54,7 @@ class DHSDataset(object):
     """Docstring for DHSDataset. """
 
     def __init__(self, filename, shapefile, adm2=False):
-        """TODO: to be defined1.
+        """TODO: to be defined.
 
         :filename: TODO
 
@@ -83,4 +82,4 @@ class DHSDataset(object):
         self.df = self.df[fields.values()]
 
     def join_to_map(self):
-        self.dhs_to_boundaries = pd.merge(left=self.boundaries, right=self.df, left_on="REGCODE", right_on="region")
+        self.df = pd.merge(left=self.boundaries, right=self.df, left_on="REGCODE", right_on="region")
