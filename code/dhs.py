@@ -30,20 +30,24 @@ class KivaDataset(object):
 
         """
         self._kiva_loan_region = Path(datadir) / "loan_themes_by_region.csv"
+        self._kiva_loan_theme_id = Path(datadir) / "loan_theme_ids.csv"
         self._filename = Path(datadir) / "kiva_loans.csv"
+        self.country = country
         self.df = pd.read_csv(self._filename)
         self.loan_reg = pd.read_csv(self._kiva_loan_region)
+        self.loan_themes_by_id = pd.read_csv(self._kiva_loan_theme_id)
         self.make_geographic()
 
     def make_geographic(self):
         # http://www.spatialreference.org/ref/epsg/2263/
         crs = {'init': 'epsg:2263'}  # I don't think this is actually necessary, but see link above
-        if country:
-            self.loan_reg = self.loan_reg[self.loan_reg.country == country].dropna(subset=["geocode"])
+        if self.country:
+            self.loan_reg = self.loan_reg[self.loan_reg.country == self.country].dropna(subset=["geocode"])
         self.loan_reg = self.loan_reg.dropna(subset=["geocode"])
-        self.loan_reg['geocode'] = self.loan_reg.geocode.apply(pd.eval).apply(lambda x: Point(*x[0]))
-        self.kiva_mpi_geo = geopandas.GeoDataFrame(self.loan_reg, crs=crs, geometry=geocode)
-        self.df = pd.merge(left=self.df, right=self.kiva_mpi_geo, on="")
+        self.loan_reg["geocode"] = self.loan_reg.geocode.apply(pd.eval).apply(lambda x: Point(*x[0]))
+        self.kiva_mpi_geo = geopandas.GeoDataFrame(self.loan_reg, crs=crs, geometry="geocode")
+        self.df = pd.merge(left=self.df, right=self.loan_themes_by_id, on="id")
+        self.df = pd.merge(left=self.df, right=self.loan_reg, on="Loan Theme ID")
 
 
 class DHSDataset(object):
