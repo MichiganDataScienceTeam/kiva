@@ -67,6 +67,11 @@ class DHSDataset(object):
         self.preprocess()
         self.join_to_map()
 
+    def _preprocess_toilet(self, toilet):
+        # https://dhsprogram.com/pubs/pdf/DHSQ7/DHS7_Household_QRE_EN_16Mar2017_DHSQ7.pdf
+        # page 9, number 109
+        return None if toilet // 1 == 9 else toilet // 1
+
     def preprocess(self):
         """Keep and rename relevant columns
         """
@@ -74,12 +79,43 @@ class DHSDataset(object):
                 "v024": "region",
                 "v116": "toilet",
                 "v127": "floor_type",
-                "v133": "education"
+                "v133": "education",
+                "v119": "electricity",
+                "v160": "toilet_shared",
+                "v113": "water_source",
+                "v115": "water_time",
+                "v161": "cooking_fuel",
+                "v120": "radio",
+                "v121": "television",
+                "v122": "refrigerator",
+                "v123": "bike",
+                "v124": "motorcycle",
+                "v125": "truck",
+                "v153": "telephone",
+                "v169a": "mobile_phone",
+                "v169b": "mobile_phone_banking",
+                "v170": "bank_account",
+                "v190": "wealth_index",
+                "v191": "wealth_index_1",
+                "v714": "working",
+                "v745a": "owns_house",
+                "v745b": "owns_land"
                 }
 
         for key, item in fields.items():
             self.df[item] = self.df[key]
         self.df = self.df[fields.values()]
+        self.df = self.df[(self.df.toilet < 90)
+                          & (self.df.floor_type < 90)
+                          & (self.df.education < 90)
+                          & (self.df.electricity < 2)
+                          & (self.df.toiled_shared < 2)
+                          & (self.df.telephone < 2)
+                          & (self.df.truck < 2)
+                          & (self.df.refrigerator < 2)
+                          & (self.df.bike < 2)
+                          & (self.df.motorcycle < 2)]
+        self.df['toilet'] = self.df['toilet'].apply(self._preprocess_toilet)
 
     def join_to_map(self):
         self.df = pd.merge(left=self.boundaries, right=self.df, left_on="REGCODE", right_on="region")
