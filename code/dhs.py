@@ -1,4 +1,5 @@
 import pandas as pd
+import pickle as pkl
 import geopandas
 from shapely.geometry import Point
 from pathlib import Path
@@ -17,8 +18,29 @@ class JoinedDataset(object):
         """
         self._kiva_dataset = kiva_dataset
         self._dhs_dataset = dhs_dataset
-        self.df = geopandas.sjoin(self._dhs_dataset.df, self._kiva_dataset.df, how="inner")
+        self.df = geopandas.sjoin(self._kiva_dataset.df, self._dhs_dataset.df, how="right", op="intersects")
 
+
+class KivaMPIDataset(object):
+    def __init__(self, datadir, country=None):
+        self.cache_path = "./cache/kiva_mpi_dataset.pkl"
+        try:
+            print("Trying cache")
+            self.df = pkl.load(open(self.cache_path))
+        except:
+            print("Not using cache")
+            self._mpi_path = Path(datadir) / "kiva_mpi_region_locations.csv"
+            self.country = country
+            self.df = pd.read_csv(self._mpi_path)
+            self.make_geographic()
+            pkl.dump(self.df, open(self.cache_path, 'wb'))
+
+    def make_geographic(self):
+        if self.country:
+            self.df = self.df[self.df.country == self.country]
+        self.df.dropna(subset=["geo"])
+        self.df["geocode"] = self.df.geo.apply(pd.eval).apply(lambda x: Point(*x))
+        self.df = geopandas.GeoDataFrame(self.df, geometry="geocode")
 
 class KivaDataset(object):
 
@@ -41,7 +63,7 @@ class KivaDataset(object):
         # http://www.spatialreference.org/ref/epsg/2263/
         crs = {'init': 'epsg:2263'}  # I don't think this is actually necessary, but see link above
         if self.country:
-            self.loan_reg = self.loan_reg[self.loan_reg.country == self.country].dropna(subset=["geocode"])
+            self.loan_reg = self.loan_reg[self.loan_reg.country == self.country]
         self.loan_reg = self.loan_reg.dropna(subset=["geocode"])
         self.loan_reg["geocode"] = self.loan_reg.geocode.apply(pd.eval).apply(lambda x: Point(*x[0]))
         self.loan_reg = geopandas.GeoDataFrame(self.loan_reg, crs=crs, geometry="geocode")
@@ -53,19 +75,32 @@ class DHSDataset(object):
 
     """Docstring for DHSDataset. """
 
-    def __init__(self, filename, shapefile, adm2=False):
+    def __init__(self, filename, shapefile, adm2=False, bust_cache=False):
         """TODO: to be defined.
 
         :filename: TODO
 
         """
-        self._filename = filename
-        self._shapefile = shapefile
-        self.df = pd.read_stata(filename, convert_categoricals=False)
-        self.boundaries = geopandas.read_file(shapefile)
+        self.cache_path = "./cache/dhs_dataset.pkl"
+        try:
+            self.df = pkl.load(open(self.cache_path))
+        except:
+            self._filename = filename
+            self._shapefile = shapefile
+            print("Reading Stata File")
+            self.df = pd.read_stata(filename, convert_categoricals=False)
+            print("Done reading Stata File")
+            print("Reading Shapefile")
+            self.boundaries = geopandas.read_file(shapefile)
+            print("Done reading Shapefile")
 
-        self.preprocess()
-        self.join_to_map()
+            print("Preprocessing")
+            self.preprocess()
+            print("Finished preprocessing")
+            print("Joining Data and Shape")
+            self.join_to_map()
+            print("Joined Data and Shape")
+            pkl.dump(self.df, open(self.cache_path, "wb"))
 
     def _preprocess_toilet(self, toilet):
         # https://dhsprogram.com/pubs/pdf/DHSQ7/DHS7_Household_QRE_EN_16Mar2017_DHSQ7.pdf
